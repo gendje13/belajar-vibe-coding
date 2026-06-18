@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { users } from "../db/schema";
+import { users, sessions } from "../db/schema";
 import { eq } from "drizzle-orm";
 
 export class UsersService {
@@ -31,5 +31,39 @@ export class UsersService {
     });
 
     return "OK";
+  }
+
+  async login(payload: any) {
+    const { email, password } = payload;
+
+    // Find user by email
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (existingUser.length === 0) {
+      throw new Error("Email atau password salah");
+    }
+
+    const user = existingUser[0];
+
+    // Verify password using Bun's native bcrypt support
+    const isPasswordValid = await Bun.password.verify(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error("Email atau password salah");
+    }
+
+    // Generate token (UUID)
+    const token = crypto.randomUUID();
+
+    // Insert session into database
+    await db.insert(sessions).values({
+      token,
+      userId: user.id,
+    });
+
+    return token;
   }
 }

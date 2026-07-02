@@ -25,6 +25,10 @@ export const usersRoute = new Elysia()
         email: t.String({ maxLength: 255 }),
         password: t.String({ maxLength: 255 }),
       }),
+      detail: {
+        summary: "Register new user",
+        tags: ["Users"],
+      },
     }
   )
   .post(
@@ -47,6 +51,10 @@ export const usersRoute = new Elysia()
         email: t.String({ maxLength: 255 }),
         password: t.String({ maxLength: 255 }),
       }),
+      detail: {
+        summary: "User login",
+        tags: ["Users"],
+      },
     }
   )
   .get(
@@ -66,6 +74,13 @@ export const usersRoute = new Elysia()
         set.status = 401;
         return { error: "Unauthorized" };
       }
+    },
+    {
+      detail: {
+        summary: "Get current user profile",
+        tags: ["Users"],
+        security: [{ BearerAuth: [] }],
+      },
     }
   )
   .delete(
@@ -85,6 +100,13 @@ export const usersRoute = new Elysia()
         set.status = 401;
         return { error: "Unauthorized" };
       }
+    },
+    {
+      detail: {
+        summary: "User logout",
+        tags: ["Users"],
+        security: [{ BearerAuth: [] }],
+      },
     }
   );
 

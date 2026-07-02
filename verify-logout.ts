@@ -24,7 +24,7 @@ async function runTests() {
         }),
       })
     );
-    const regData = await regRes.json();
+    const regData = (await regRes.json()) as { data: string };
     console.log("Register Response:", regRes.status, regData);
     if (regRes.status !== 200 || regData.data !== "OK") {
       throw new Error("Registration failed");
@@ -42,7 +42,7 @@ async function runTests() {
         }),
       })
     );
-    const loginData = await loginRes.json();
+    const loginData = (await loginRes.json()) as { data: string };
     console.log("Login Response:", loginRes.status, loginData);
     if (loginRes.status !== 200 || !loginData.data) {
       throw new Error("Login failed");
@@ -57,7 +57,7 @@ async function runTests() {
         headers: { Authorization: `Bearer ${token}` },
       })
     );
-    const currentData = await currentRes.json();
+    const currentData = (await currentRes.json()) as { data: { email: string } };
     console.log("Current User Response:", currentRes.status, currentData);
     if (currentRes.status !== 200 || currentData.data.email !== testEmail) {
       throw new Error("Get current user failed");
@@ -94,7 +94,7 @@ async function runTests() {
         headers: { Authorization: `Bearer ${token}` },
       })
     );
-    const logoutData = await logoutRes.json();
+    const logoutData = (await logoutRes.json()) as { data: string };
     console.log("Logout Response:", logoutRes.status, logoutData);
     if (logoutRes.status !== 200 || logoutData.data !== "OK") {
       throw new Error("Logout failed");
@@ -128,8 +128,9 @@ async function runTests() {
     // Cleanup test user and sessions
     console.log("Cleaning up test data from DB...");
     const testUsers = await db.select().from(users).where(eq(users.email, testEmail));
-    if (testUsers.length > 0) {
-      const uId = testUsers[0].id;
+    const testUser = testUsers[0];
+    if (testUser) {
+      const uId = testUser.id;
       await db.delete(sessions).where(eq(sessions.userId, uId));
       await db.delete(users).where(eq(users.id, uId));
     }

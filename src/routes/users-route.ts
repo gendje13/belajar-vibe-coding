@@ -3,6 +3,15 @@ import { UsersService } from "../services/users-service";
 
 const usersService = new UsersService();
 
+/**
+ * Helper untuk mengekstrak Bearer token dari header Authorization.
+ * Mengembalikan token string jika valid, atau null jika header tidak ada / formatnya salah.
+ */
+function extractBearerToken(authHeader: string | undefined): string | null {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+  return authHeader.substring(7);
+}
+
 export const usersRoute = new Elysia()
   .post(
     "/api/users",
@@ -10,10 +19,11 @@ export const usersRoute = new Elysia()
       try {
         const result = await usersService.register(body);
         return { data: result };
-      } catch (error: any) {
-        if (error.message === "Email sudah terdaftar") {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Internal Server Error";
+        if (message === "Email sudah terdaftar") {
           set.status = 400;
-          return { error: error.message };
+          return { error: message };
         }
         set.status = 500;
         return { error: "Internal Server Error" };
@@ -21,9 +31,9 @@ export const usersRoute = new Elysia()
     },
     {
       body: t.Object({
-        name: t.String({ maxLength: 255 }),
-        email: t.String({ maxLength: 255 }),
-        password: t.String({ maxLength: 255 }),
+        name: t.String({ minLength: 1, maxLength: 255 }),
+        email: t.String({ format: "email", maxLength: 255 }),
+        password: t.String({ minLength: 8, maxLength: 255 }),
       }),
       response: {
         200: t.Object({ data: t.String() }),
@@ -43,7 +53,7 @@ export const usersRoute = new Elysia()
             },
           },
           400: {
-            description: "Email sudah terdaftar",
+            description: "Email sudah terdaftar atau validasi gagal",
             content: {
               "application/json": {
                 example: { error: "Email sudah terdaftar" },
@@ -68,10 +78,11 @@ export const usersRoute = new Elysia()
       try {
         const token = await usersService.login(body);
         return { data: token };
-      } catch (error: any) {
-        if (error.message === "Email atau password salah") {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Internal Server Error";
+        if (message === "Email atau password salah") {
           set.status = 400;
-          return { error: error.message };
+          return { error: message };
         }
         set.status = 500;
         return { error: "Internal Server Error" };
@@ -79,8 +90,8 @@ export const usersRoute = new Elysia()
     },
     {
       body: t.Object({
-        email: t.String({ maxLength: 255 }),
-        password: t.String({ maxLength: 255 }),
+        email: t.String({ format: "email", maxLength: 255 }),
+        password: t.String({ minLength: 8, maxLength: 255 }),
       }),
       response: {
         200: t.Object({ data: t.String() }),
@@ -122,17 +133,15 @@ export const usersRoute = new Elysia()
   .get(
     "/api/users/current",
     async ({ headers, set }) => {
+      const token = extractBearerToken(headers["authorization"]);
+      if (!token) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
       try {
-        const authHeader = headers["authorization"];
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-          set.status = 401;
-          return { error: "Unauthorized" };
-        }
-
-        const token = authHeader.substring(7);
         const user = await usersService.getCurrentUser(token);
         return { data: user };
-      } catch (error: any) {
+      } catch {
         set.status = 401;
         return { error: "Unauthorized" };
       }
@@ -184,17 +193,15 @@ export const usersRoute = new Elysia()
   .delete(
     "/api/users/logout",
     async ({ headers, set }) => {
+      const token = extractBearerToken(headers["authorization"]);
+      if (!token) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
       try {
-        const authHeader = headers["authorization"];
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-          set.status = 401;
-          return { error: "Unauthorized" };
-        }
-
-        const token = authHeader.substring(7);
         const result = await usersService.logout(token);
         return { data: result };
-      } catch (error: any) {
+      } catch {
         set.status = 401;
         return { error: "Unauthorized" };
       }
@@ -229,4 +236,3 @@ export const usersRoute = new Elysia()
       },
     }
   );
-
